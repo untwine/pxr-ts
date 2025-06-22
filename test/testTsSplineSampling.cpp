@@ -10,11 +10,14 @@
 #include <pxr/gf/math.h>
 #include <pxr/tf/diagnosticLite.h>
 #include <pxr/tf/enum.h>
-#include "./tsTest_Museum.h"
-#include "./tsTest_TsEvaluator.h"
+#include <pxr/tf/getenv.h>
+#include <tsTest/museum.h>
+#include <tsTest/tsEvaluator.h>
 
 #include <iostream>
 #include <fstream>
+#include <regex>
+#include <cmath>
 
 using namespace pxr;
 
@@ -366,33 +369,56 @@ void TestSampleWithSources(std::ostream& out)
     DoTest(out, "SampleWithSources");
 }
 
-int main(int argc, const char **argv)
-{
-    std::ofstream outFile;
-    std::ostream* outPtr = nullptr;
-    const char* outName = "testTsSplineSampling.txt";
-    if (argc > 1) {
-        if (strcmp(argv[1], "-") == 0) {
-            outPtr = &std::cout;
-        } else {
-            outName = argv[1];
-        }
+bool fuzzyEqual(const std::string& a, const std::string& b) {
+    std::regex number(R"([-+]?[0-9]*\.?[0-9]+)");
+    auto itA = std::sregex_iterator(a.begin(), a.end(), number);
+    auto itB = std::sregex_iterator(b.begin(), b.end(), number);
+    auto end = std::sregex_iterator();
+
+    for (; itA != end && itB != end; ++itA, ++itB) {
+        if (std::abs(std::stod(itA->str()) - std::stod(itB->str())) > 1e-14)
+            return false;
     }
 
-    if (!outPtr) {
-        outFile.open(outName);
-        if (outFile.good()) {
-            outPtr = &outFile;
-        } else {
-            std::cerr << "Error: Cannot open output file "
-                      << '"' << argv[1] << '"'
-                      << std::endl;
+    if (itA == end && itB == end) {
+        std::cerr << "[fuzzy match] " << a << " ≈ " << b << "\n";
+        return true;
+    }
+
+    return itA == end && itB == end;
+}
+
+int main()
+{
+    const char* outName = "testTsSplineSampling.txt";
+    std::ofstream out(outName);
+    if (!out) return std::cerr << "Can't open output file\n", 1;
+
+    TestSample(out);
+    TestSampleWithSources(out);
+
+    std::ifstream result(outName);
+    std::ifstream expected(TfGetenv("DATA_PATH"));
+    if (!result || !expected)
+        return std::cerr << "Can't open comparison files\n", 1;
+
+    std::string line, expectedLine;
+    int lineNumber = 1;
+    while (true) {
+        bool gotResult = static_cast<bool>(std::getline(result, line));
+        bool gotExpected = static_cast<bool>(std::getline(expected, expectedLine));
+        if (!gotResult && !gotExpected) break;
+
+        if ((line != expectedLine && !fuzzyEqual(line, expectedLine)) ||
+            gotResult != gotExpected)
+        {
+            std::cerr << "Difference at line " << lineNumber << ":\n";
+            std::cerr << "  Expected: \"" << expectedLine << "\"\n";
+            std::cerr << "  Got     : \"" << line << "\"\n";
             return 1;
         }
+        ++lineNumber;
     }
-
-    TestSample(*outPtr);
-    TestSampleWithSources(*outPtr);
 
     return 0;
 }

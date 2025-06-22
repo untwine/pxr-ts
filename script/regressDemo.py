@@ -168,7 +168,7 @@ class Controller:
 
     def _PopulateMuseum(self):
 
-        for name in Ts.TsTest_Museum.GetAllNames():
+        for name in ts_test.TsTest_Museum.GetAllNames():
             self._museumList.addItem(name)
 
     def _SetDefaults(self):
@@ -283,14 +283,14 @@ class CanvasWidget(QtWidgets.QWidget):
     def LoadMuseumCase(self, caseName):
 
         # Get museum data.
-        splineData = Ts.TsTest_Museum.GetDataByName(caseName)
+        splineData = ts_test.TsTest_Museum.GetDataByName(caseName)
 
         # Only handle Beziers.
         if splineData.GetIsHermite():
             return
 
         # Build spline.
-        self._spline = Ts.TsTest_TsEvaluator().SplineDataToSpline(splineData)
+        self._spline = ts_test.TsTest_TsEvaluator().SplineDataToSpline(splineData)
 
         # If we have a batch ghost, remove it.
         self._RemoveBatchGhost()
@@ -512,11 +512,11 @@ class CanvasWidget(QtWidgets.QWidget):
                 endKnot, startKnot, self.HandlePre, kColors["Bezier"])
 
         # Convert spline to splineData.
-        splineData = Ts.TsTest_TsEvaluator().SplineToSplineData(
+        splineData = ts_test.TsTest_TsEvaluator().SplineToSplineData(
             self._unlimitedSpline)
 
         # Sample with TsTest.
-        samples = Ts.TsTest_SampleBezier(
+        samples = ts_test.TsTest_SampleBezier(
             splineData, numSamples = 200 * numSegments)
 
         # Translate to QPainterPath.
@@ -582,9 +582,9 @@ class CanvasWidget(QtWidgets.QWidget):
 
             # Sample with TsTest.
             # XXX: should use TsSpline.Sample() API when that becomes available.
-            evaluator = Ts.TsTest_TsEvaluator()
+            evaluator = ts_test.TsTest_TsEvaluator()
             splineData = evaluator.SplineToSplineData(self._spline)
-            times = Ts.TsTest_SampleTimes(splineData)
+            times = ts_test.TsTest_SampleTimes(splineData)
             times.AddStandardTimes()
             samples = evaluator.Eval(splineData, times)
 

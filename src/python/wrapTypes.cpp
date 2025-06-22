@@ -58,11 +58,11 @@ void wrapSplineSamplesWithSources()
 
 void wrapTypes()
 {
-    TfPyWrapEnum<TsInterpMode>();
-    TfPyWrapEnum<TsCurveType>();
-    TfPyWrapEnum<TsExtrapMode>();
-    TfPyWrapEnum<TsAntiRegressionMode>();
-    TfPyWrapEnum<TsSplineSampleSource>();
+    TfPyWrapEnum<TsInterpMode>("InterpMode");
+    TfPyWrapEnum<TsCurveType>("CurveType");
+    TfPyWrapEnum<TsExtrapMode>("ExtrapMode");
+    TfPyWrapEnum<TsAntiRegressionMode>("AntiRegressionMode");
+    TfPyWrapEnum<TsSplineSampleSource>("SplineSampleSource");
 
     class_<TsLoopParams>("LoopParams")
 
@@ -87,7 +87,7 @@ void wrapTypes()
 
         // Default init is not suppressed, so automatically generated.
 
-        .def(init<TsExtrapMode>())
+        .def(init<TsExtrapMode>("ExtrapMode"))
         .def(init<const TsExtrapolation &>())
         .def(self == self)
         .def(self != self)

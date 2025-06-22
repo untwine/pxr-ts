@@ -1,314 +1,106 @@
-set(PXR_PREFIX pxr/base)
-set(PXR_PACKAGE ts)
+cmake_minimum_required(VERSION 3.21...3.31)
 
-set(libs
-    vt
-    gf
-    tf
+# Default build type value.
+set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the build type")
+
+project(pxr-ts
+    VERSION 0.25.5
+    HOMEPAGE_URL "https://github.com/untwine/pxr-ts"
+    LANGUAGES C CXX
 )
 
-set(include
-    ""
-)
-
-set(privateClasses
-    sample
-)
-
-set(classes
-    binary
-    debugCodes
-    eval
-    knot
-    knotData
-    knotMap
-    raii
-    regressionPreventer
-    spline
-    splineData
-    tangentConversions
-    typeHelpers
-    types
-)
-
-set(headers
-    api.h
-    valueTypeDispatch.h
-)
-
-set(pyfiles
-    __init__.py
-)
-
-set(pycpp
-    module.cpp
-    wrapKnot.cpp
-    wrapKnotMap.cpp
-    wrapRaii.cpp
-    wrapRegressionPreventer.cpp
-    wrapSpline.cpp
-    wrapTangentConversions.cpp
-    wrapTypes.cpp
-)
-
-if (${PXR_BUILD_TESTS})
-    list(APPEND classes
-        tsTest_Museum
-        tsTest_SampleBezier
-        tsTest_SampleTimes
-        tsTest_SplineData
-        tsTest_TsEvaluator
-    )
-    list(APPEND headers
-        tsTest_Types.h
-    )
-    list(APPEND pycpp
-        wrapTsTest_Museum.cpp
-        wrapTsTest_SampleBezier.cpp
-        wrapTsTest_SampleTimes.cpp
-        wrapTsTest_SplineData.cpp
-        wrapTsTest_TsEvaluator.cpp
-        wrapTsTest_Types.cpp
-    )
-    list(APPEND pyfiles
-        TsTest_Comparator.py
-        TsTest_Baseliner.py
-        TsTest_Grapher.py
-    )
+if (NOT "${CMAKE_CXX_STANDARD}")
+    set(CMAKE_CXX_STANDARD 17 CACHE STRING "Default C++ standard")
 endif()
 
-if (${PXR_BUILD_MAYAPY_TESTS})
-    list(APPEND pyfiles
-        TsTest_MayapyDriver.py
-        TsTest_MayapyEvaluator.py
-    )
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+# Default options.
+option(BUILD_TESTS "Build tests" ON)
+option(BUILD_SHARED_LIBS "Build Shared Library" ON)
+option(BUILD_PYTHON_BINDINGS "Build Python Bindings" ON)
+option(ENABLE_PRECOMPILED_HEADERS "Enable precompiled headers." OFF)
+option(PXR_BUILD_ANIMX_TESTS "Build AnimX spline tests." OFF)
+option(PXR_BUILD_MAYAPY_TESTS "Build mayapy spline tests." OFF)
+
+if (NOT BUILD_SHARED_LIBS)
+    add_compile_definitions(PXR_STATIC)
 endif()
 
-if (${PXR_BUILD_ANIMX_TESTS})
-    list(APPEND libs ${ANIMX_LIBRARY})
-    list(APPEND include ${ANIMX_INCLUDES})
-    list(APPEND classes tsTest_AnimXEvaluator)
-    list(APPEND pycpp wrapTsTest_AnimXEvaluator.cpp)
-endif()
+include(GNUInstallDirs)
 
-pxr_library(ts
-    LIBRARIES
-        ${libs}
+if (WIN32)
+    # Prevent WinDef.h from defining min/max macros.
+    add_definitions(-DNOMINMAX)
 
-    INCLUDE_DIRS
-        ${include}
+    # Exclude unnecessary Windows APIs for faster builds and fewer macro conflicts.
+    add_definitions(-DWIN32_LEAN_AND_MEAN)
 
-    PRIVATE_CLASSES
-        ${privateClasses}
-
-    PUBLIC_CLASSES
-        ${classes}
-
-    PUBLIC_HEADERS
-        ${headers}
-
-    PYMODULE_CPPFILES
-        ${pycpp}
-
-    PYMODULE_FILES
-        ${pyfiles}
-
-    DOXYGEN_FILES
-        doxygen/overview.md
-        doxygen/status.md
-        doxygen/regression.md
-        doxygen/tsTest.dox
-        doxygen/images/boldS.png
-        doxygen/images/centerVertical.png
-        doxygen/images/endVert.png
-        doxygen/images/fourThirdOneThird.png
-        doxygen/images/keepRatio.png
-        doxygen/images/keepStart.png
-        doxygen/images/nearVertical.png
-        doxygen/images/oneThirdFourThird.png
-        doxygen/images/regressiveS.png
-        doxygen/images/regressiveSStandard.png
-        doxygen/images/startVert.png
-        doxygen/images/tanLens.png
-)
-
-if (${PXR_BUILD_TESTS})
-    target_compile_definitions(ts PRIVATE TS_BUILD_TEST_FRAMEWORK)
-    if (TARGET _ts)
-        target_compile_definitions(_ts PRIVATE TS_BUILD_TEST_FRAMEWORK)
+    # Disable /Zc:inline in VS 2019+ to retain "arch_ctor_<name>" symbols in release.
+    # https://developercommunity.visualstudio.com/t/914943
+    if (MSVC_VERSION GREATER_EQUAL 1920)
+        set(CMAKE_CXX_FLAGS "/Zc:inline- ${CMAKE_CXX_FLAGS}")
+    else()
+        set(CMAKE_CXX_FLAGS "/Zc:inline ${CMAKE_CXX_FLAGS}")
     endif()
+
+    # Disable harmless Visual Studio warning C4003 (non-standard preprocessor).
+    # https://developercommunity.visualstudio.com/t/364698
+    set(CMAKE_CXX_FLAGS "/wd4003 ${CMAKE_CXX_FLAGS}")
 endif()
 
-if (${PXR_BUILD_ANIMX_TESTS})
-    target_compile_definitions(ts PRIVATE TS_BUILD_ANIMX_TEST_FRAMEWORK)
-    if (TARGET _ts)
-        target_compile_definitions(_ts PRIVATE TS_BUILD_ANIMX_TEST_FRAMEWORK)
-    endif()
+# Update build type from environment for CMake < 3.22
+if (DEFINED ENV{CMAKE_BUILD_TYPE})
+    set(CMAKE_BUILD_TYPE $ENV{CMAKE_BUILD_TYPE}
+        CACHE STRING "Specifies the build type" FORCE)
 endif()
 
-if (PXR_TS_DEFAULT_ANTI_REGRESSION_AUTHORING_MODE)
-    set(val "${PXR_TS_DEFAULT_ANTI_REGRESSION_AUTHORING_MODE}")
-    target_compile_definitions(
-        ts PRIVATE "-DPXR_TS_DEFAULT_ANTI_REGRESSION_AUTHORING_MODE=${val}")
+find_package(pxr-arch 0.25.5 REQUIRED)
+find_package(pxr-vt 0.25.5 REQUIRED)
+find_package(pxr-gf 0.25.5 REQUIRED)
+find_package(pxr-tf 0.25.5 REQUIRED)
+
+if(BUILD_PYTHON_BINDINGS)
+    add_compile_definitions(PXR_PYTHON_SUPPORT_ENABLED=1)
+    find_package(pxr-boost 0.25.5 REQUIRED)
+
+    if (NOT CMAKE_INSTALL_PYTHON_LIBDIR)
+        set(py_version "${Python_VERSION_MAJOR}.${Python_VERSION_MINOR}")
+        set(CMAKE_INSTALL_PYTHON_LIBDIR
+            "${CMAKE_INSTALL_LIBDIR}/python${py_version}/site-packages"
+            CACHE INTERNAL "Installation Python library path.")
+    endif ()
 endif()
 
-pxr_build_test(
-    testTsThreadedCOW
-    CPPFILES
-        testenv/testTsThreadedCOW.cpp
-    LIBRARIES
-        ts
-        tf
-)
+add_subdirectory(src)
 
-pxr_build_test(
-    testTsSplineAPI
-    CPPFILES
-        testenv/testTsSplineAPI.cpp
-    LIBRARIES
-        ts
-        vt
-        tf
-)
+# Build and setup tests if required.
+if (BUILD_TESTS)
+    # Python is needed to run the tests.
+    find_package(Python COMPONENTS Interpreter Development REQUIRED)
+    find_package(Pytest)
 
-pxr_build_test(
-    testTsSplineSampling
-    CPPFILES
-        testenv/testTsSplineSampling.cpp
-    LIBRARIES
-        ts
-        vt
-        tf
-)
-
-pxr_build_test(
-    testTsTangentConversion
-    CPPFILES
-        testenv/testTsTangentConversion.cpp
-    LIBRARIES
-        ts
-        vt
-        tf
-)
-
-pxr_test_scripts(
-    testenv/testTsDerivatives.py
-    testenv/testTsRegressionPreventer.py
-    testenv/tsTest_TsFramework.py
-    testenv/tsTest_TsVsBezier.py
-)
-
-pxr_install_test_dir(
-    SRC testenv/tsTest_TsFramework.testenv
-    DEST tsTest_TsFramework
-)
-
-pxr_install_test_dir(
-    SRC testenv/testTsRegressionPreventer.testenv
-    DEST testTsRegressionPreventer
-)
-
-pxr_install_test_dir(
-    SRC testenv/testTsSplineSampling.testenv
-    DEST testTsSplineSampling
-)
-
-pxr_register_test(
-    testTsDerivatives
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsDerivatives"
-)
-
-pxr_register_test(
-    testTsRegressionPreventer
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsRegressionPreventer"
-)
-
-pxr_register_test(
-    testTsThreadedCOW
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsThreadedCOW"
-)
-
-pxr_register_test(
-    testTsSplineAPI
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsSplineAPI"
-)
-
-pxr_register_test(
-    testTsSplineSampling
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsSplineSampling"
-    DIFF_COMPARE testTsSplineSampling.txt
-)
-
-pxr_register_test(
-    testTsTangentConversion
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/testTsTangentConversion"
-)
-
-pxr_register_test(
-    tsTest_TsFramework
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/tsTest_TsFramework"
-)
-
-pxr_register_test(
-    tsTest_TsVsBezier
-    PYTHON
-    COMMAND "${CMAKE_INSTALL_PREFIX}/tests/tsTest_TsVsBezier"
-)
-
-if (${PXR_BUILD_MAYAPY_TESTS})
-    pxr_test_scripts(
-        testenv/tsTest_MayapyFramework.py
-        testenv/tsTest_TsVsMayapy.py
-    )
-
-    pxr_install_test_dir(
-        SRC testenv/tsTest_MayapyFramework.testenv
-        DEST tsTest_MayapyFramework
-    )
-
-    set(mayapyBin "${MAYAPY_LOCATION}/mayapy")
-
-    set(cmd "${CMAKE_INSTALL_PREFIX}/tests/tsTest_MayapyFramework")
-    pxr_register_test(
-        tsTest_MayapyFramework
-        PYTHON
-        COMMAND "${cmd} ${mayapyBin}"
-    )
-
-    set(cmd "${CMAKE_INSTALL_PREFIX}/tests/tsTest_TsVsMayapy")
-    pxr_register_test(
-        tsTest_TsVsMayapy
-        PYTHON
-        COMMAND "${cmd} ${mayapyBin}"
-    )
+    enable_testing()
+    add_subdirectory(test)
 endif()
 
-if (${PXR_BUILD_ANIMX_TESTS})
-    pxr_test_scripts(testenv/tsTest_AnimXFramework.py)
+include(CMakePackageConfigHelpers)
 
-    pxr_install_test_dir(
-        SRC testenv/tsTest_AnimXFramework.testenv
-        DEST tsTest_AnimXFramework
-    )
+configure_package_config_file(
+    "cmake/pxr-ts-config.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/pxr-ts-config.cmake"
+    INSTALL_DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/pxr-ts
+)
 
-    pxr_register_test(
-        tsTest_AnimXFramework
-        PYTHON
-        COMMAND "${CMAKE_INSTALL_PREFIX}/tests/tsTest_AnimXFramework"
-    )
-endif()
+write_basic_package_version_file(
+    "pxr-ts-config-version.cmake"
+    COMPATIBILITY AnyNewerVersion
+)
 
-if (${PXR_BUILD_MAYAPY_TESTS} AND ${PXR_BUILD_ANIMX_TESTS})
-    pxr_test_scripts(testenv/tsTest_MayapyVsAnimX.py)
-
-    set(cmd "${CMAKE_INSTALL_PREFIX}/tests/tsTest_MayapyVsAnimX")
-    set(mayapyBin "${MAYAPY_LOCATION}/mayapy")
-    pxr_register_test(
-        tsTest_MayapyVsAnimX
-        PYTHON
-        COMMAND "${cmd} ${mayapyBin}"
-    )
-endif()
+install(
+    FILES
+        "${CMAKE_CURRENT_BINARY_DIR}/pxr-ts-config.cmake"
+        "${CMAKE_CURRENT_BINARY_DIR}/pxr-ts-config-version.cmake"
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/cmake/pxr-ts
+)

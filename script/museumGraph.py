@@ -6,11 +6,11 @@
 
 from pxr import Ts, Gf
 
-from pxr.Ts import TsTest_Museum as Museum
-from pxr.Ts import TsTest_SampleTimes as STimes
-from pxr.Ts import TsTest_SampleBezier as SampleBezier
-from pxr.Ts import TsTest_TsEvaluator as Evaluator
-from pxr.Ts import TsTest_Grapher as Grapher
+from ts_test import TsTest_Museum as Museum
+from ts_test import TsTest_SampleTimes as STimes
+from ts_test import TsTest_SampleBezier as SampleBezier
+from ts_test import TsTest_TsEvaluator as Evaluator
+from ts_test import TsTest_Grapher as Grapher
 
 import argparse
 import sys
