@@ -94,8 +94,7 @@ TsSpline TsTest_TsEvaluator::SplineDataToSpline(
     }
 
     const SData::Features features = data.GetRequiredFeatures();
-    if ((features & SData::FeatureHermiteSegments)
-        || (features & SData::FeatureAutoTangents))
+    if (features & SData::FeatureAutoTangents)
     {
         TF_CODING_ERROR("Unsupported spline features");
         return TsSpline(valueType);
@@ -106,6 +105,9 @@ TsSpline TsTest_TsEvaluator::SplineDataToSpline(
     TsAntiRegressionAuthoringSelector selector(TsAntiRegressionNone);
 
     TsSpline spline(valueType);
+    if (data.GetIsHermite()) {
+        spline.SetCurveType(TsCurveTypeHermite);
+    }
 
     spline.SetPreExtrapolation(_MakeExtrap(data.GetPreExtrapolation()));
     spline.SetPostExtrapolation(_MakeExtrap(data.GetPostExtrapolation()));
