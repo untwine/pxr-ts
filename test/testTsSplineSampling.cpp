@@ -11,8 +11,8 @@
 #include <pxr/gf/math.h>
 #include <pxr/tf/diagnosticLite.h>
 #include <pxr/tf/enum.h>
-#include <pxr/ts/tsTest_Museum.h>
-#include <pxr/ts/tsTest_TsEvaluator.h>
+#include <tsTest/museum.h>
+#include <tsTest/tsEvaluator.h>
 
 #include <iostream>
 #include <fstream>

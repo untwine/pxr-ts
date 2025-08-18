@@ -10,8 +10,8 @@
 #include <pxr/ts/knot.h>
 #include <pxr/ts/raii.h>
 #include <pxr/ts/spline.h>
-#include <pxr/ts/tsTest_Museum.h>
-#include <pxr/ts/tsTest_TsEvaluator.h>
+#include <tsTest/museum.h>
+#include <tsTest/tsEvaluator.h>
 
 #include <pxr/gf/math.h>
 #include <pxr/tf/diagnosticLite.h>
