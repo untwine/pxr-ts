@@ -9,7 +9,7 @@
 
 #include <pxr/ts/knot.h>
 #include <pxr/ts/spline.h>
-#include <pxr/ts/tsTest_Museum.h>
+#include <tsTest/museum.h>
 
 #include <pxr/gf/math.h>
 #include <pxr/tf/diagnosticLite.h>
