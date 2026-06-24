@@ -110,13 +110,19 @@ TfType TsSpline::GetValueType() const
 
 void TsSpline::SetTimeValued(const bool timeValued)
 {
+    if (GetValueType() == Ts_GetType<GfTimeCode>()) {
+        TF_CODING_ERROR("SetTimeValued is deprecated and cannot be invoked "
+                        "when this spline's value type is GfTimeCode.");
+        return;
+    }
     _PrepareForWrite();
     _data->timeValued = timeValued;
 }
 
 bool TsSpline::IsTimeValued() const
 {
-    return _GetData()->timeValued;
+    return _GetData()->valueType == Ts_GetType<GfTimeCode>() ||
+           _GetData()->timeValued;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -320,6 +326,9 @@ bool TsSpline::SetKnot(
     _PrepareForWrite(knot.GetValueType());
 
     // Copy knot data.
+    // Note that if we're setting a double knot on a TsTimeCode spline,
+    // we don't need to convert the knot to TsTimeCode -- all TsSpline knot
+    // getters convert the result knots' value types to that of the spline.
     const size_t idx = _data->SetKnot(knot._GetData(), knot.GetCustomData());
 
     // Update algorithmic tangents and deregress.
@@ -738,9 +747,11 @@ void TsSpline::_PrepareForWrite(TfType valueType)
     else if (_data && !_data->isTyped && valueType)
     {
         // If we guessed correctly, upgrade to real storage by marking typed.
-        if (valueType == Ts_GetType<double>())
+        if (valueType == Ts_GetType<double>()
+            || valueType == Ts_GetType<GfTimeCode>())
         {
             _data->isTyped = true;
+            _data->valueType = valueType;
         }
 
         // Otherwise create new storage and transfer.  The second parameter to

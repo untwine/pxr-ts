@@ -101,9 +101,14 @@ public:
     template <typename T>
     bool IsHolding() const;
 
+    /// \deprecated
+    /// Deprecated in favor of constructing the TsSpline with a value type
+    /// of GfTimeCode.
     TS_API
     void SetTimeValued(bool timeValued);
 
+    /// Convenience function that returns true if the value type of the
+    /// spline is GfTimeCode.
     TS_API
     bool IsTimeValued() const;
 
@@ -777,8 +782,8 @@ bool TsSpline::_Eval(
 }
 
 // Implement a special case that will ensure the contents of the VtValue output
-// variable contain a value of the same type (double, float, or GfHalf) as the
-// spline.
+// variable contain a value of the same type (double, float, GfHalf,
+// GfTimeCode) as the spline.
 template <>
 TS_API
 bool TsSpline::_Eval(

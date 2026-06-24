@@ -331,8 +331,107 @@ TestTruncate()
         && TestTruncateMuseumCases();
 }
 
+bool
+TestApplyOffsetAndScale()
+{
+    TfType dType = TfType::Find<double>();
+    TfType tType = TfType::Find<GfTimeCode>();
+
+    TsSpline dSpline(dType);
+    TsSpline tSpline(tType);
+
+    TsKnot dKnot0(dType), dKnot3(dType), dKnot6(dType);
+    TsKnot tKnot0(tType), tKnot3(tType), tKnot6(tType);
+
+    dKnot0.SetTime(0.0);
+    dKnot0.SetValue(0.0);
+    dKnot0.SetNextInterpolation(TsInterpLinear);
+
+    dKnot3.SetTime(3.0);
+    dKnot3.SetValue(3.0);
+    dKnot3.SetNextInterpolation(TsInterpCurve);
+    dKnot3.SetPostTanWidth(1.0);
+    dKnot3.SetPostTanSlope(1.0);
+
+    dKnot6.SetTime(6.0);
+    dKnot6.SetValue(6.0);
+    dKnot6.SetNextInterpolation(TsInterpHeld);
+    dKnot6.SetPreTanWidth(1.0);
+    dKnot6.SetPreTanSlope(-1.0);
+
+    dSpline.SetKnot(dKnot0);
+    dSpline.SetKnot(dKnot3);
+    dSpline.SetKnot(dKnot6);
+
+    tKnot0.SetTime(0.0);
+    tKnot0.SetValue(GfTimeCode(0.0));
+    tKnot0.SetNextInterpolation(TsInterpLinear);
+
+    tKnot3.SetTime(3.0);
+    tKnot3.SetValue(GfTimeCode(3.0));
+    tKnot3.SetNextInterpolation(TsInterpCurve);
+    tKnot3.SetPostTanWidth(1.0);
+    tKnot3.SetPostTanSlope(GfTimeCode(1.0));
+
+    tKnot6.SetTime(6.0);
+    tKnot6.SetValue(GfTimeCode(6.0));
+    tKnot6.SetNextInterpolation(TsInterpHeld);
+    tKnot6.SetPreTanWidth(1.0);
+    tKnot6.SetPreTanSlope(GfTimeCode(-1.0));
+
+    tSpline.SetKnot(tKnot0);
+    tSpline.SetKnot(tKnot3);
+    tSpline.SetKnot(tKnot6);
+
+    TsSpline dSplineCopy(dSpline);
+    TsSpline tSplineCopy(tSpline);
+
+    Ts_SplineOffsetAccess::ApplyOffsetAndScale(&dSplineCopy, 0.0, 2.0);
+    Ts_SplineOffsetAccess::ApplyOffsetAndScale(&tSplineCopy, 0.0, 2.0);
+
+    const std::vector<TsKnot> dKnots = {dKnot0, dKnot3, dKnot6};
+    const std::vector<TsKnot> tKnots = {tKnot0, tKnot3, tKnot6};
+
+    for (const TsKnot& dKnot : dKnots) {
+        TsKnot scaledKnot;
+        const double time = dKnot.GetTime();
+        TF_AXIOM(dSplineCopy.GetKnot(time*2.0, &scaledKnot));
+        double dValue, dScaled;
+        TF_AXIOM(dKnot.GetValue(&dValue) && scaledKnot.GetValue(&dScaled)
+                 && dValue == dScaled);
+        TF_AXIOM(dKnot.GetPreTanWidth()*2.0 == scaledKnot.GetPreTanWidth());
+        TF_AXIOM(dKnot.GetPostTanWidth()*2.0 == scaledKnot.GetPostTanWidth());
+        TF_AXIOM(dKnot.GetPreTanSlope(&dValue)
+                 && scaledKnot.GetPreTanSlope(&dScaled)
+                 && dValue/2.0 == dScaled);
+        TF_AXIOM(dKnot.GetPostTanSlope(&dValue)
+                 && scaledKnot.GetPostTanSlope(&dScaled)
+                 && dValue/2.0 == dScaled);
+    }
+
+    for (const TsKnot& tKnot : tKnots) {
+        TsKnot scaledKnot;
+        const double time = tKnot.GetTime();
+        TF_AXIOM(tSplineCopy.GetKnot(time*2.0, &scaledKnot));
+        GfTimeCode tValue, tScaled;
+        TF_AXIOM(tKnot.GetValue(&tValue) && scaledKnot.GetValue(&tScaled)
+                 && tValue*2.0 == tScaled);
+        TF_AXIOM(tKnot.GetPreTanWidth()*2.0 == scaledKnot.GetPreTanWidth());
+        TF_AXIOM(tKnot.GetPostTanWidth()*2.0 == scaledKnot.GetPostTanWidth());
+        TF_AXIOM(tKnot.GetPreTanSlope(&tValue)
+                 && scaledKnot.GetPreTanSlope(&tScaled)
+                 && tValue == tScaled);
+        TF_AXIOM(tKnot.GetPostTanSlope(&tValue)
+                 && scaledKnot.GetPostTanSlope(&tScaled)
+                 && tValue == tScaled);
+    }
+
+    return true;
+}
+
 int main(int argc, const char **argv)
 {
-    bool success = TestTruncate();
+    bool success =
+        TestTruncate() && TestApplyOffsetAndScale();
     return success ? 0 : 1;
 }

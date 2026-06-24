@@ -150,11 +150,14 @@ public:
     // we have been presumptively created as TypedSplineData<double>.
     bool isTyped : 1;
 
-    // Whether ApplyOffsetAndScale applies to values also.
+    // Deprecated in favor of valueType for full type specification. This bit
+    // currently exists solely to ensure double values and not GfTimeCode
+    // values are extracted when the legacy TsSpline::SetTimeValued is invoked.
     bool timeValued : 1;
 
     // Overall spline parameters.
     TsCurveType curveType : 2;
+    TfType valueType;
     TsExtrapolation preExtrapolation;
     TsExtrapolation postExtrapolation;
     TsLoopParams loopParams;
@@ -267,7 +270,7 @@ TfType Ts_TypedSplineData<T>::GetValueType() const
         return TfType();
     }
 
-    return Ts_GetType<T>();
+    return valueType;
 }
 
 template <typename T>
@@ -289,7 +292,9 @@ bool Ts_TypedSplineData<T>::operator==(
 {
     // Compare non-templated data.
     if (isTyped != other.isTyped
-        || timeValued != other.timeValued
+        || ((timeValued || valueType == Ts_GetType<GfTimeCode>())
+            != (other.timeValued ||
+                other.valueType == Ts_GetType<GfTimeCode>()))
         || curveType != other.curveType
         || preExtrapolation != other.preExtrapolation
         || postExtrapolation != other.postExtrapolation
@@ -595,6 +600,8 @@ void Ts_TypedSplineData<T>::RemoveKnotAtTime(
     }
 }
 
+// Apply offset and scale to knot for knot fields that need to be
+// transformed regardless of whether the spline is time valued.
 template <typename T>
 static void _ApplyOffsetAndScaleToKnot(
     Ts_TypedKnotData<T>* const knotData,
@@ -610,10 +617,6 @@ static void _ApplyOffsetAndScaleToKnot(
     // Process tangent widths (relative, strictly positive).
     knotData->preTanWidth *= scale;
     knotData->postTanWidth *= scale;
-
-    // Process slopes (inverse relative).
-    knotData->preTanSlope /= scale;
-    knotData->postTanSlope /= scale;
 }
 
 template <typename T>
@@ -661,7 +664,7 @@ void Ts_TypedSplineData<T>::ApplyOffsetAndScale(
     // Process knots.  Duplicate the logic that is applied unconditionally, so
     // that we can rip through the entire vector just once, and we don't have to
     // do the if-check on each iteration.
-    if (timeValued)
+    if (timeValued || valueType == Ts_GetType<GfTimeCode>())
     {
         for (Ts_TypedKnotData<T> &knotData : knots)
         {
@@ -678,6 +681,11 @@ void Ts_TypedSplineData<T>::ApplyOffsetAndScale(
     {
         for (Ts_TypedKnotData<T> &knotData : knots) {
             _ApplyOffsetAndScaleToKnot(&knotData, offset, scale);
+
+            // Process slopes (inverse relative). We scale slopes
+            // for value types that are not time valued.
+            knotData.preTanSlope /= scale;
+            knotData.postTanSlope /= scale;
         }
     }
 
