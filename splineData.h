@@ -48,7 +48,7 @@ public:
         TfType valueType,
         const Ts_SplineData *overallParamSource = nullptr);
 
-    virtual ~Ts_SplineData();
+    TS_API virtual ~Ts_SplineData();
 
 public:
     // Virtual interface for typed data.

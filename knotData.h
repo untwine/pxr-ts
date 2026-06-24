@@ -66,7 +66,7 @@ public:
     // Typically used by Create(), but can be invoked directly for clients that
     // don't care about the value dimension, and instantiate this struct without
     // subclassing.
-    Ts_KnotData();
+    TS_API Ts_KnotData();
 
     // Creates an appropriately subtyped instance on the heap.
     static Ts_KnotData* Create(TfType valueType);
