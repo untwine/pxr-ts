@@ -325,10 +325,36 @@ TestTruncateMuseumCases()
 }
 
 bool
+TestTruncateSpecificCases()
+{
+    std::string testId = "TestTruncateSpecificCases";
+
+    TsSpline splineOsc;
+    splineOsc.SetPostExtrapolation(TsExtrapLoopOscillate);
+    {
+        TsKnot k1, k2;
+        k1.SetTime(5);
+        k1.SetValue(10.0);
+        k1.SetNextInterpolation(TsInterpCurve);
+        k2.SetTime(10);
+        k2.SetValue(5.0);
+        splineOsc.SetKnots({k1, k2});
+    }
+    const GfInterval oscInterval(10, 12.5, CLOSED, OPEN);
+    const TsSpline truncOsc = splineOsc.GetTruncated(oscInterval);
+    if (!VerifySplineEquivalence(testId, "splineOsc", splineOsc, truncOsc,
+                                 oscInterval, oscInterval, 1e-10)) {
+        return false;
+    }
+    return true;
+}
+
+bool
 TestTruncate()
 {
     return TestTruncateBaseCases()
-        && TestTruncateMuseumCases();
+        && TestTruncateMuseumCases()
+        && TestTruncateSpecificCases();
 }
 
 template <typename T>
