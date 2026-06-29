@@ -297,7 +297,9 @@ bool Ts_TypedKnotData<T>::operator==(
     // COMP(curveType);
 
     COMP(value);
-    COMP(preValue);
+    if (dualValued) {
+        COMP(preValue);
+    }
     COMP(preTanSlope);
     COMP(postTanSlope);
 

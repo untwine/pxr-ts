@@ -18,6 +18,7 @@
 #include "pxr/base/tf/enum.h"
 #include "pxr/base/tf/stl.h"
 #include "pxr/base/tf/registryManager.h"
+#include "pxr/base/trace/trace.h"
 
 #include <algorithm>
 #include <iterator>
@@ -606,6 +607,130 @@ TsSpline::GetTruncated(
     // Ts_Truncate issued a coding error already if truncatedData is null.
     return TsSpline();
 }
+
+TsSpline
+TsSpline::GetTimeScaled(double timeScale, double timeOffset) const
+{
+    if (timeScale == 0) {
+        TF_CODING_ERROR("Cannot scale spline by scale factor of 0. Returning "
+                        "empty spline.");
+        return TsSpline();
+    }
+
+    if (_data == nullptr || _data->times.empty()) {
+        return TsSpline(GetValueType());
+    }
+
+    Ts_SplineData* scaledData;
+    if (timeScale < 0 && HasInnerLoops()) {
+        scaledData = Ts_Bake(_GetData(), GfInterval::GetFullInterval(),
+                             /* includeExtrapLoops */ false);
+    } else {
+        scaledData = _GetData()->Clone();
+    }
+
+    if (!TF_VERIFY(scaledData, "Failed to clone or bake spline data")) {
+        return TsSpline();
+    }
+
+    scaledData->ApplyOffsetAndScale(timeOffset, timeScale);
+    return TsSpline(scaledData);
+}
+
+// static
+TsSpline
+TsSpline::Concatenate(const std::vector<TsSpline>& splines)
+{
+    // Note: This function could be optimized slightly for performance by
+    // lowering it to interface with spline data directly.
+    TRACE_FUNCTION();
+    if (splines.empty()) {
+        return TsSpline();
+    }
+
+    if (splines.size() == 1) {
+        return splines[0];
+    }
+
+    TfType valueType;
+    TsExtrapolation preExtrapolation;
+    for (const TsSpline& spline : splines) {
+        if (!spline.IsEmpty()) {
+            valueType = spline.GetValueType();
+            preExtrapolation = spline.GetPreExtrapolation();
+            break;
+        }
+    }
+    if (valueType == TfType()) {
+        return TsSpline();
+    }
+
+    TsSpline resultSpline(valueType);
+    TsKnot prevKnot(valueType);
+    TsExtrapolation postExtrapolation;
+    for (size_t i = 0; i < splines.size(); ++i) {
+        const TsSpline& spline = splines[i];
+        if (spline.IsEmpty()) {
+            continue;
+        }
+
+        if (spline.GetValueType() != valueType) {
+            TF_CODING_ERROR("Concatenation of splines with varying value types "
+                            "is not supported, returning empty spline.");
+            return TsSpline();
+        }
+
+        if (spline.HasInnerLoops()) {
+            TF_CODING_ERROR("Concatenation of splines with inner loops is "
+                            "not supported, returning empty spline.");
+            return TsSpline();
+        }
+
+        postExtrapolation = spline.GetPostExtrapolation();
+        TsKnotMap knots = spline.GetKnots();
+        TsKnot& startKnot = *knots.begin();
+
+        // Modify the start knot so that it has the pre values of the previous
+        // knot
+        if (i > 0) {
+            if (prevKnot.GetTime() != startKnot.GetTime()) {
+                TF_CODING_ERROR("Got boundary knots to TsSpline::Concatenate "
+                                "at mismatched times, returning empty spline");
+                return TsSpline();
+            }
+
+            // Set the pre value only if the prev knot's pre value is different
+            // from the start knot's value.
+            VtValue startKnotValue, prevKnotPreValue;
+            startKnot.ClearPreValue();
+            startKnot.GetValue(&startKnotValue);
+            if (prevKnot.GetPreValue(&prevKnotPreValue)
+                && startKnotValue != prevKnotPreValue)
+            {
+                startKnot.SetPreValue(prevKnotPreValue);
+            }
+
+            VtValue value;
+            if (prevKnot.GetPreTanSlope(&value)) {
+                startKnot.SetPreTanSlope(value);
+            }
+            startKnot.SetPreTanWidth(prevKnot.GetPreTanWidth());
+            startKnot.SetPreTanAlgorithm(prevKnot.GetPreTanAlgorithm());
+        }
+
+        for (const TsKnot& knot: knots) {
+            resultSpline.SetKnot(knot);
+        }
+
+        // Store the boundary knot's pre values.
+        prevKnot = *knots.rbegin();
+    }
+
+    resultSpline.SetPreExtrapolation(preExtrapolation);
+    resultSpline.SetPostExtrapolation(postExtrapolation);
+    return resultSpline;
+}
+
 
 ////////////////////////////////////////////////////////////////////////////////
 // Comparison
