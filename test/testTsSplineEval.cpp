@@ -38,12 +38,13 @@ void Expect(const TsSpline& spline, const Expected& expected)
     // have values in the range 8-16 so multiplying by 8 represents ~1 ulp for
     // these values.
     const double epsilon = 8 * std::numeric_limits<T>::epsilon();
+    constexpr int kPrec = std::numeric_limits<T>::digits10 + 2;
 
     T value;
     if (spline.EvalPreValue(expected.time, &value)) {
         TF_AXIOM(expected.preValue);
         if (!GfIsClose(value, *expected.preValue, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for EvalPreValue<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
@@ -59,7 +60,7 @@ void Expect(const TsSpline& spline, const Expected& expected)
     if (spline.Eval(expected.time, &value)) {
         TF_AXIOM(expected.value);
         if (!GfIsClose(value, *expected.value, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for Eval<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
@@ -75,7 +76,7 @@ void Expect(const TsSpline& spline, const Expected& expected)
     if (spline.EvalPreDerivative(expected.time, &value)) {
         TF_AXIOM(expected.preDerivative);
         if (!GfIsClose(value, *expected.preDerivative, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for EvalPreDerivative<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
@@ -91,7 +92,7 @@ void Expect(const TsSpline& spline, const Expected& expected)
     if (spline.EvalDerivative(expected.time, &value)) {
         TF_AXIOM(expected.derivative);
         if (!GfIsClose(value, *expected.derivative, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for EvalDerivative<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
@@ -107,7 +108,7 @@ void Expect(const TsSpline& spline, const Expected& expected)
     if (spline.EvalPreValueHeld(expected.time, &value)) {
         TF_AXIOM(expected.preHeld);
         if (!GfIsClose(value, *expected.preHeld, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for EvalPreValueHeld<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
@@ -123,7 +124,7 @@ void Expect(const TsSpline& spline, const Expected& expected)
     if (spline.EvalHeld(expected.time, &value)) {
         TF_AXIOM(expected.held);
         if (!GfIsClose(value, *expected.held, epsilon)) {
-            std::cout.precision(std::numeric_limits<T>::max_digits10);
+            std::cout.precision(kPrec);
             std::cout << "Value mismatch for EvalHeld<"
                       << TfType::Find<T>().GetTypeName()
                       << ">(" << expected.time << "):\n"
