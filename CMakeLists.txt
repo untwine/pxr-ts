@@ -42,6 +42,11 @@ if (WIN32)
     # Disable harmless Visual Studio warning C4003 (non-standard preprocessor).
     # https://developercommunity.visualstudio.com/t/364698
     set(CMAKE_CXX_FLAGS "/wd4003 ${CMAKE_CXX_FLAGS}")
+
+    # MSVC misreports __cplusplus as 199711L unless this flag is set,
+    # breaking code gated on it (e.g. std::numeric_limits<GfHalf>::lowest()
+    # in ilmbase_halfLimits.h).
+    set(CMAKE_CXX_FLAGS "/Zc:__cplusplus ${CMAKE_CXX_FLAGS}")
 endif()
 
 find_package(pxr-arch 0.26.8 EXACT REQUIRED)
